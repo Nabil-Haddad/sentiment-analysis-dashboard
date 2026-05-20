@@ -4,21 +4,21 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from db.base import Base
 from db.session import engine
-from db.seed import seed_temp_user
+from db.seed import seed_temp_user, seed_aspects
 from routers.analysis import router
+from routers.aspects import AspectRouter
 from models.user import UserDB
 from models.analysis import AnalysisDB, AspectAnalysisDB, WithoutAspectAnalysisDB
+from models.aspect import AspectDB
 from services.inference import load_model
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # create the database
     Base.metadata.create_all(bind=engine)
-    # create the emp_user
     seed_temp_user()
+    seed_aspects()
     print("Loading model...")
-    # load the model
     load_model()
     print("Model ready.")
     yield
@@ -34,6 +34,7 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(AspectRouter)
 
 
 @app.get("/")

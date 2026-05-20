@@ -3,7 +3,7 @@ from db.session import SessionLocal
 
 TEMP_USER_EMAIL = "temp@dashboard.local"
 
-# Set during startup by seed_temp_user(), used by analysis_service
+# Set during startup by seed_temp_user(), used across services
 temp_user_id: int = None
 
 
@@ -29,5 +29,16 @@ def seed_temp_user():
 
         temp_user_id = user.user_id
 
+    finally:
+        db.close()
+
+
+def seed_aspects():
+    from services.aspect_service import seed_default_aspects
+
+    db = SessionLocal()
+    try:
+        seed_default_aspects(db, temp_user_id)
+        print("Default aspects seeded.")
     finally:
         db.close()

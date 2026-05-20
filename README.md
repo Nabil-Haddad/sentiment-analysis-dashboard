@@ -17,9 +17,9 @@ Given a set of customer comments, the pipeline:
 
 1. **Splits** compound sentences on conjunctions (`but`, `however`, `.`) so each opinion is analysed independently
 2. **Classifies** each phrase as `positive`, `neutral`, or `negative` using a RoBERTa model fine-tuned on 58M tweets
-3. **Extracts aspects** (price, design, quality, service…) using spaCy's lemma matching — correctly handling plurals, verb forms, and avoiding substring false positives
+3. **Extracts aspects** (user-defined topics such as price, design, quality…) using spaCy's lemma matching — correctly handling plurals, verb forms, and avoiding substring false positives
 4. **Stores** every result in a structured SQLite database linked to the originating analysis
-5. **Displays** everything in a clean dashboard with stat cards, history, and per-analysis drill-downs
+5. **Displays** everything in a clean dashboard with stat cards, history, per-analysis drill-downs, and a dedicated aspect management page
 
 **Example input:**
 ```
@@ -46,6 +46,8 @@ I really loved the overall experience.
 **Batch inference.** All phrases from a request are collected and passed to the model in a single forward pass, reducing inference time from ~70s (sequential) to ~6s (batched) on the same test set.
 
 **spaCy lemma matching.** Aspect detection was migrated from substring keyword matching to spaCy token-level lemma matching after notebook experiments exposed two concrete failure modes: substring false positives (`"priceless"` matching `price`) and missed inflections (`"deliveries"` not matching `delivery`).
+
+**User-defined aspects stored in the database.** Aspects are persisted in a dedicated `aspects` table rather than a hardcoded array. Each aspect is scoped to a user and carries an `is_active` flag. The dashboard lets users add, enable, disable, and delete aspects at any time — only active aspects are used in the next analysis run. Defaults are seeded once at startup using an idempotency check, so restarting the server never creates duplicates.
 
 **Layered backend architecture.** The FastAPI backend is organized in four strict layers — routers, services, repositories, and models — keeping HTTP logic, business logic, and database access completely separated.
 
@@ -101,9 +103,9 @@ AI Multi-Tool Dashboard/
 │   │
 │   └── Frontend/
 │       └── src/
-│           ├── api/         ← Axios client
+│           ├── api/         ← Axios client (analysis + aspects)
 │           ├── components/  ← StatCard, SentimentBadge, Sidebar…
-│           └── pages/       ← Dashboard, History, NewAnalysis, AnalysisDetail
+│           └── pages/       ← Dashboard, History, NewAnalysis, AnalysisDetail, Aspects
 │
 └── docs/
     └── project-breakdown.md   ← full technical breakdown
@@ -176,6 +178,8 @@ Each one builds on the previous and ends with a conclusion that motivates the ne
 
 ## API Endpoints
 
+**Sentiment Analysis**
+
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/sentiment-analysis/` | Submit a list of comments for analysis |
@@ -183,6 +187,16 @@ Each one builds on the previous and ends with a conclusion that motivates the ne
 | `GET` | `/sentiment-analysis/results/{id}` | Retrieve a single analysis by ID |
 | `GET` | `/sentiment-analysis/stats/summary` | Get aggregate stats (total, positive, negative counts) |
 | `DELETE` | `/sentiment-analysis/{id}` | Delete an analysis and all its results |
+
+**Aspect Management**
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/aspects/` | List all aspects for the current user |
+| `GET` | `/aspects/active` | List only active aspects |
+| `POST` | `/aspects/` | Add a new aspect |
+| `PATCH` | `/aspects/{id}` | Enable or disable an aspect |
+| `DELETE` | `/aspects/{id}` | Permanently delete an aspect |
 
 ---
 

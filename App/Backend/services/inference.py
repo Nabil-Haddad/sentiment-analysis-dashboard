@@ -54,7 +54,7 @@ def predict_batch(texts: list[str]) -> list[dict]:
     return results
 
 
-def predict_comments(comments: list[str]) -> dict:
+def predict_comments(comments: list[str], active_aspects: list[str]) -> dict:
     aspect_results = []
     without_aspect_results = []
     all_phrases = []
@@ -73,7 +73,7 @@ def predict_comments(comments: list[str]) -> dict:
     predictions = predict_batch(all_phrases)
 
     for phrase, prediction in zip(all_phrases, predictions):
-        aspects = extract_aspects(phrase)
+        aspects = extract_aspects(phrase,  active_aspects)
 
         if aspects:
             for aspect in aspects:

@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, Clock, Sparkles, User } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Clock, Sparkles, User, Tag } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/new', icon: PlusCircle, label: 'New Analysis', end: false },
   { to: '/history', icon: Clock, label: 'History', end: false },
+  { to: '/aspects', icon: Tag, label: 'Aspects', end: false },
 ];
 
 export default function Sidebar() {
