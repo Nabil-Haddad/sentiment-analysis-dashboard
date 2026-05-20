@@ -2,14 +2,8 @@ import spacy
 
 nlp = spacy.load("en_core_web_sm")
 
-ASPECTS = ["price", "design", "quality", "service", "delivery", "staff", "execution", "idea", "product"]
 
-
-def extract_aspects(text: str, aspects: list[str] = None) -> list[str]:
-
-    if aspects is None:
-        aspects = ASPECTS
-
+def extract_aspects(text: str, aspects: list[str]) -> list[str]:
     aspects_set = {a.lower() for a in aspects}
 
     doc = nlp(text)

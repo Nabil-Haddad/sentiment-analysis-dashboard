@@ -3,11 +3,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException
 
 from services.inference import predict_comments
+from services.aspect_service import get_user_aspects
 from repositories.analysis_repository import(
-     save_analysis_results, get_all_analyses, 
-     get_all_analyses_with_results, 
-     get_analysis_by_id, 
-     delete_analysis_by_id, 
+     save_analysis_results, get_all_analyses,
+     get_all_analyses_with_results,
+     get_analysis_by_id,
+     delete_analysis_by_id,
      get_analysis_summary ,
      get_analysis_single_result
 )
@@ -16,7 +17,8 @@ import db.seed as seed
 
 def analyse_and_save_comments(comments: list[str], db: Session) -> dict:
     try:
-        results = predict_comments(comments)
+        active_aspects = get_user_aspects(db)
+        results = predict_comments(comments, active_aspects)
 
         analysis_id = save_analysis_results(
             db=db,

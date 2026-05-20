@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import NewAnalysis from './pages/NewAnalysis';
 import History from './pages/History';
 import AnalysisDetail from './pages/AnalysisDetail';
+import Aspects from './pages/Aspects';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/new" element={<NewAnalysis />} />
         <Route path="/history" element={<History />} />
         <Route path="/analysis/:id" element={<AnalysisDetail />} />
+        <Route path="/aspects" element={<Aspects />} />
       </Routes>
     </Layout>
   );

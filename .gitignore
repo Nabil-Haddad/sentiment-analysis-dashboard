@@ -31,7 +31,7 @@ Models piplines /Sentimental Analysis/reports/Data/
 
 # ── HuggingFace model cache (if downloaded locally inside the project) ─────────
 .cache/
-models/
+/models/
 
 # ── IDE ────────────────────────────────────────────────────────────────────────
 .vscode/
