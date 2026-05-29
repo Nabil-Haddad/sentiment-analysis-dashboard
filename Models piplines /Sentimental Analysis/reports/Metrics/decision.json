@@ -1,0 +1,10 @@
+{
+  "selected_model": "fine-tuned",
+  "model_name": "microsoft/deberta-v3-base",
+  "model_path": "/home/nhx/Projects/AI Multi-Tool Dashboard/Models piplines /Sentimental Analysis/models/deberta-absa",
+  "baseline_macro_f1": 0.687,
+  "finetuned_macro_f1": 0.7847,
+  "improvement_pct": 14.22,
+  "selection_criterion": "macro_f1",
+  "reasoning": "Macro F1 selected as primary metric due to class imbalance (positive class = 65% of test set). Fine-tuned DeBERTa-v3-base outperforms cardiffnlp baseline on all metrics, with the largest gains on minority classes (negative +13.34%, neutral +12.40%)."
+}
