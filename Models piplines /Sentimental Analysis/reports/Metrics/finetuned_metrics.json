@@ -1,0 +1,43 @@
+{
+  "model": "microsoft/deberta-v3-base",
+  "model_path": "/home/nhx/Projects/AI Multi-Tool Dashboard/Models piplines /Sentimental Analysis/models/deberta-absa",
+  "training_log": [
+    {
+      "epoch": 1,
+      "loss": 0.9715,
+      "val_acc": 0.7583,
+      "val_f1": 0.6814
+    },
+    {
+      "epoch": 2,
+      "loss": 0.6385,
+      "val_acc": 0.8083,
+      "val_f1": 0.7422
+    },
+    {
+      "epoch": 3,
+      "loss": 0.4322,
+      "val_acc": 0.8028,
+      "val_f1": 0.7348
+    },
+    {
+      "epoch": 4,
+      "loss": 0.297,
+      "val_acc": 0.8333,
+      "val_f1": 0.753
+    },
+    {
+      "epoch": 5,
+      "loss": 0.2095,
+      "val_acc": 0.8306,
+      "val_f1": 0.7551
+    }
+  ],
+  "test_metrics": {
+    "model": "microsoft/deberta-v3-base",
+    "accuracy": 0.8634,
+    "precision": 0.8165,
+    "recall": 0.7771,
+    "macro_f1": 0.7847
+  }
+}
