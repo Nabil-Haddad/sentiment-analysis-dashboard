@@ -1,5 +1,3 @@
-
-
 import os
 import sys
 import json
@@ -8,13 +6,7 @@ import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, random_split
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, get_linear_schedule_with_warmup
-from sklearn.metrics import (
-        accuracy_score,
-        precision_score,
-        recall_score,
-        f1_score,
-        classification_report,
-)
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
 
 sys.path.append(os.path.dirname(__file__))
 from data_preprocessing import load_absa_dataset, ABSADataset, CLASS_WEIGHTS, ID2LABEL, LABEL2ID
