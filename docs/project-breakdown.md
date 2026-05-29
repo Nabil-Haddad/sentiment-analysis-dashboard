@@ -18,6 +18,7 @@ Before writing any application code, the model and pipeline logic were validated
 - **`02_aspect_based_splitting.ipynb`** — Experimented with how to split compound sentences (e.g. *"The design is beautiful but the price is too high"*) into independent phrases before classification, so each aspect gets its own sentiment score rather than one collapsed result for the whole sentence.
 - **`03_batch_inference_optimization.ipynb`** — Benchmarked single-call inference vs. batched inference. Batching all phrases from a request into a single forward pass significantly reduces latency and is the approach used in production.
 - **`04_aspect_based_analysing_SpaCy.ipynb`** — Evaluated spaCy as a replacement for the keyword-based aspect detection used in earlier notebooks. Compared three approaches side by side: substring keyword matching, spaCy lemma matching, and dependency-based opinion extraction. This notebook drove the decision to adopt spaCy lemma matching in production.
+- **`05_deberta_absa_investigation.ipynb`** — Explored the SemEval-2014 Restaurant ABSA dataset: class distribution (positive = 65% of examples, which ruled out accuracy as the primary metric), label remapping, the aspect-prefix input format (`"aspect: {aspect} [SEP] {text}"`), class weight calculation for the weighted loss function, and initial hyperparameter choices. Every value in `train_absa.py` traces back to a finding in this notebook.
 
 This research-first approach means every decision in the production code has a reason behind it.
 
@@ -25,7 +26,7 @@ This research-first approach means every decision in the production code has a r
 
 ### Phase 2 — Standalone Python Pipeline
 
-Once the experiments were validated, the logic was extracted into clean, importable Python modules under `Models piplines/Sentimental Analysis/src/`:
+Once the experiments were validated, the logic was extracted into clean, importable Python modules under `Models piplines/Sentimental Analysis/src/roberta/`:
 
 | Module | Responsibility |
 |---|---|
@@ -37,6 +38,86 @@ Once the experiments were validated, the logic was extracted into clean, importa
 A `test_pipeline.py` script validated the full pipeline end-to-end across 19 real-world comment types: straightforward, compound, double-aspect, edge cases, and no-aspect inputs.
 
 This phase produced a standalone, testable pipeline — completely independent of any web framework.
+
+---
+
+### Phase 1.5 — Model Fine-Tuning and Comparison
+
+After the application was built and validated, the model itself was revisited. The goal was to replace the general-purpose RoBERTa model with one fine-tuned specifically for aspect-based sentiment classification.
+
+The work lives in `src/deberta_absa/` and follows the same research-first pattern: notebook investigation first, then clean production scripts.
+
+#### Why DeBERTa
+
+`microsoft/deberta-v3-base` was chosen over other candidates because of its disentangled attention mechanism, which encodes both token content and relative position separately. For ABSA inputs that include an explicit aspect prefix, this makes the model more sensitive to how the aspect relates to different parts of the sentence.
+
+#### Dataset
+
+The SemEval-2014 Restaurant ABSA dataset (`yqzheng/semeval2014_restaurants`) was used. It provides `(text, aspect, label)` triples where labels are `{-1, 0, 1}` (negative, neutral, positive). These were remapped to `{0, 1, 2}` to match PyTorch's expected label format.
+
+The class distribution is heavily skewed — positive examples make up ~65% of the test set. This had two direct consequences on the training setup:
+
+- **Macro F1 as primary metric** (not accuracy). On a skewed dataset, a model can achieve high accuracy by predicting the majority class almost exclusively. Macro F1 averages performance equally across all three classes, so minority-class failures are not hidden.
+- **Weighted cross-entropy loss.** Class weights were computed as the inverse of class frequency and applied to the loss function so the model penalises mistakes on negative and neutral examples more heavily.
+
+#### Input Format
+
+Standard sentiment models receive only the text. To make the model aspect-aware, each input is formatted as:
+
+```
+aspect: {aspect} [SEP] {text}
+```
+
+For example:
+```
+aspect: food [SEP] The food was amazing but the service was slow.
+```
+
+This prefix is injected at the `ABSADataset.__getitem__` level via `build_absa_input`, so the model always knows which aspect it is being asked to evaluate.
+
+#### Training Setup
+
+| Hyperparameter | Value | Rationale |
+|---|---|---|
+| Base model | `microsoft/deberta-v3-base` | Disentangled attention, strong on NLU benchmarks |
+| Epochs | 5 | Validated against early stopping |
+| Batch size | 16 | GPU memory constraint |
+| Gradient accumulation | 2 | Effective batch size of 32 without requiring more VRAM |
+| Learning rate | 2e-5 | Standard for fine-tuning BERT-class models |
+| Warmup ratio | 10% | Avoids instability in early steps |
+| Early stopping patience | 2 | Stops training if val macro F1 doesn't improve for 2 consecutive epochs |
+| Seed | 42 | Fixed for reproducibility across all random sources (PyTorch, NumPy) |
+
+Gradient clipping (`max_norm=1.0`) was applied before each optimizer step to prevent exploding gradients. The best checkpoint (by val macro F1) was saved and reloaded for the final test evaluation — the last epoch is not necessarily the best.
+
+#### Results
+
+| Metric | Baseline (cardiffnlp RoBERTa) | Fine-tuned (DeBERTa-v3-base) | Delta |
+|---|---|---|---|
+| Accuracy | 0.7857 | 0.8634 | +0.0777 |
+| Precision | 0.6829 | 0.8165 | +0.1336 |
+| Recall | 0.6925 | 0.7771 | +0.0846 |
+| Macro F1 | 0.687 | 0.7847 | **+0.0977 (+14.22%)** |
+
+The largest gains were on minority classes: negative (+13.34%) and neutral (+12.40%). These are the classes that matter most in a production ABSA system — a model that mostly predicts "positive" is not useful.
+
+#### Model Selection Script
+
+`compare_models.py` reads `baseline_metrics.json` and `finetuned_metrics.json`, prints a side-by-side comparison table with per-metric deltas, selects the winner by macro F1, and writes a `decision.json` file:
+
+```json
+{
+  "selected_model": "fine-tuned",
+  "model_name": "microsoft/deberta-v3-base",
+  "baseline_macro_f1": 0.687,
+  "finetuned_macro_f1": 0.7847,
+  "improvement_pct": 14.22,
+  "selection_criterion": "macro_f1",
+  "reasoning": "..."
+}
+```
+
+This file is the intended interface between the research pipeline and the application backend — the backend reads it to decide which model to load rather than having the model name hardcoded in application config.
 
 ---
 
@@ -180,14 +261,22 @@ The pipeline does the following:
 
 ---
 
-## Model
+## Models
 
-**`cardiffnlp/twitter-roberta-base-sentiment`**
+**Baseline — `cardiffnlp/twitter-roberta-base-sentiment`**
 
 - Architecture: RoBERTa-base fine-tuned on ~58M tweets for 3-class sentiment classification
 - Labels: `negative`, `neutral`, `positive`
-- Chosen because it was pre-trained on short, informal social-media text — the same register as product reviews and customer comments
-- Max token length: 128 (sufficient for phrase-level inputs after splitting)
+- Chosen as the baseline because it was pre-trained on short, informal social-media text — the same register as product reviews and customer comments
+- Macro F1 on SemEval-2014 Restaurant test set: **0.687**
+
+**Fine-tuned — `microsoft/deberta-v3-base` (selected)**
+
+- Architecture: DeBERTa-v3-base with disentangled attention, fine-tuned on the SemEval-2014 Restaurant ABSA dataset
+- Input format: `"aspect: {aspect} [SEP] {text}"` — the aspect is injected as a prefix so the model is explicitly told which aspect to evaluate
+- Trained with weighted cross-entropy to compensate for class imbalance (positive = ~65% of training data)
+- Macro F1 on SemEval-2014 Restaurant test set: **0.7847** (+14.22% over baseline)
+- Saved weights: `Models piplines/Sentimental Analysis/models/deberta-absa/`
 
 ---
 
@@ -195,7 +284,10 @@ The pipeline does the following:
 
 | Layer | Technology |
 |---|---|
-| ML model | HuggingFace Transformers, PyTorch, SciPy |
+| ML model (baseline) | `cardiffnlp/twitter-roberta-base-sentiment`, HuggingFace Transformers, PyTorch |
+| ML model (fine-tuned) | `microsoft/deberta-v3-base`, fine-tuned on SemEval-2014 Restaurant ABSA |
+| Training | PyTorch, AdamW, linear warmup scheduler, weighted cross-entropy, early stopping |
+| Evaluation | scikit-learn (macro F1, precision, recall, classification report) |
 | NLP | spaCy (`en_core_web_sm`) |
 | Backend | FastAPI, SQLAlchemy 2.0, Pydantic v2, SQLite |
 | Configuration | python-dotenv |
@@ -210,17 +302,28 @@ The pipeline does the following:
 AI Multi-Tool Dashboard/
 ├── Models piplines/
 │   └── Sentimental Analysis/
-│       ├── notebooks/          ← experimentation phase
+│       ├── notebooks/              ← experimentation phase
 │       │   ├── 01_basic_sentiment_analysis.ipynb
 │       │   ├── 02_aspect_based_splitting.ipynb
 │       │   ├── 03_batch_inference_optimization.ipynb
-│       │   └── 04_aspect_based_analysing_SpaCy.ipynb
-│       └── src/                ← standalone pipeline
-│           ├── model_loader.py
-│           ├── preprocessing.py
-│           ├── aspect_extraction.py
-│           ├── inference.py
-│           └── test_pipeline.py
+│       │   ├── 04_aspect_based_analysing_SpaCy.ipynb
+│       │   └── 05_deberta_absa_investigation.ipynb
+│       ├── src/
+│       │   ├── roberta/            ← original RoBERTa pipeline
+│       │   │   ├── model_loader.py
+│       │   │   ├── preprocessing.py
+│       │   │   ├── aspect_extraction.py
+│       │   │   ├── inference.py
+│       │   │   └── test_pipeline.py
+│       │   └── deberta_absa/       ← fine-tuning pipeline
+│       │       ├── data_preprocessing.py
+│       │       ├── baseline_eval.py
+│       │       ├── train_absa.py
+│       │       └── compare_models.py
+│       ├── models/
+│       │   └── deberta-absa/       ← saved fine-tuned weights (safetensors)
+│       └── reports/
+│           └── Metrics/            ← baseline_metrics.json, finetuned_metrics.json, decision.json
 ├── App/
 │   ├── Backend/
 │   │   ├── core/               ← configuration + env loading

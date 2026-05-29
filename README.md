@@ -8,6 +8,7 @@ A full-stack AI application that performs **aspect-based sentiment analysis** on
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.11-EE4C2C?style=flat&logo=pytorch&logoColor=white)
 ![spaCy](https://img.shields.io/badge/spaCy-3.8-09A3D5?style=flat&logo=spacy&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat&logo=sqlite&logoColor=white)
+![HuggingFace](https://img.shields.io/badge/HuggingFace-DeBERTa-FFD21E?style=flat&logo=huggingface&logoColor=black)
 
 ---
 
@@ -41,7 +42,9 @@ I really loved the overall experience.
 
 ## Engineering Highlights
 
-**Research-first workflow.** Four progressive notebooks validated every decision before production code was written — model selection, phrase splitting strategy, batch optimization, and NLP-based aspect extraction.
+**Research-first workflow.** Five progressive notebooks validated every decision before production code was written — model selection, phrase splitting strategy, batch optimization, NLP-based aspect extraction, and DeBERTa fine-tuning investigation.
+
+**Fine-tuned DeBERTa-v3-base for ABSA.** The cardiffnlp RoBERTa model was established as a baseline (macro F1: 0.687) on the SemEval-2014 restaurant dataset, then `microsoft/deberta-v3-base` was fine-tuned specifically for aspect-based sentiment classification. The fine-tuned model reached **macro F1: 0.7847** — a **+14.22% improvement** over the baseline — with the largest gains on minority classes (negative +13.34%, neutral +12.40%). A `compare_models.py` script loads both metric files, prints a side-by-side comparison, and writes a `decision.json` file that encodes which model the backend should load.
 
 **Batch inference.** All phrases from a request are collected and passed to the model in a single forward pass, reducing inference time from ~70s (sequential) to ~6s (batched) on the same test set.
 
@@ -59,7 +62,8 @@ I really loved the overall experience.
 
 | Layer | Technology |
 |---|---|
-| ML Model | `cardiffnlp/twitter-roberta-base-sentiment` via HuggingFace Transformers |
+| ML Model (baseline) | `cardiffnlp/twitter-roberta-base-sentiment` via HuggingFace Transformers |
+| ML Model (fine-tuned) | `microsoft/deberta-v3-base` fine-tuned on SemEval-2014 Restaurant ABSA |
 | NLP | spaCy `en_core_web_sm` |
 | Inference | PyTorch, SciPy (softmax) |
 | Backend | FastAPI, SQLAlchemy 2.0, Pydantic v2 |
@@ -80,13 +84,24 @@ AI Multi-Tool Dashboard/
 │       │   ├── 01_basic_sentiment_analysis.ipynb
 │       │   ├── 02_aspect_based_splitting.ipynb
 │       │   ├── 03_batch_inference_optimization.ipynb
-│       │   └── 04_aspect_based_analysing_SpaCy.ipynb
-│       └── src/                                ← validated standalone pipeline
-│           ├── model_loader.py
-│           ├── preprocessing.py
-│           ├── aspect_extraction.py
-│           ├── inference.py
-│           └── test_pipeline.py
+│       │   ├── 04_aspect_based_analysing_SpaCy.ipynb
+│       │   └── 05_deberta_absa_investigation.ipynb
+│       ├── src/
+│       │   ├── roberta/                        ← original RoBERTa pipeline
+│       │   │   ├── model_loader.py
+│       │   │   ├── preprocessing.py
+│       │   │   ├── aspect_extraction.py
+│       │   │   ├── inference.py
+│       │   │   └── test_pipeline.py
+│       │   └── deberta_absa/                   ← fine-tuning pipeline
+│       │       ├── data_preprocessing.py
+│       │       ├── baseline_eval.py
+│       │       ├── train_absa.py
+│       │       └── compare_models.py
+│       ├── models/
+│       │   └── deberta-absa/                   ← saved fine-tuned weights
+│       └── reports/
+│           └── Metrics/                        ← baseline, finetuned, decision JSON
 │
 ├── App/
 │   ├── Backend/
@@ -139,6 +154,23 @@ cp .env.example .env
 uvicorn main:app --reload
 ```
 
+### (Optional) Re-run the fine-tuning pipeline
+
+```bash
+cd "Models piplines /Sentimental Analysis"
+
+pip install -r requirements.txt
+
+# 1. Evaluate the cardiffnlp baseline
+python src/deberta_absa/baseline_eval.py
+
+# 2. Fine-tune DeBERTa-v3-base (requires a GPU for reasonable training time)
+python src/deberta_absa/train_absa.py
+
+# 3. Compare both models and write decision.json
+python src/deberta_absa/compare_models.py
+```
+
 The API will be available at `http://localhost:8000`.  
 Interactive docs at `http://localhost:8000/docs`.
 
@@ -173,6 +205,7 @@ Each one builds on the previous and ends with a conclusion that motivates the ne
 | `02` | Phrase splitting — how splitting on `but` / `however` isolates mixed opinions before classification |
 | `03` | Batch optimization — benchmarking sequential vs. batched inference (~70s → ~6s on 19 comments) |
 | `04` | spaCy evaluation — comparing keyword matching vs. lemma matching vs. dependency-based opinion extraction |
+| `05` | DeBERTa ABSA investigation — dataset exploration (SemEval-2014), class imbalance analysis, hyperparameter rationale, and the aspect-prefix input format (`"aspect: {aspect} [SEP] {text}"`) that makes the model aspect-aware |
 
 ---
 
