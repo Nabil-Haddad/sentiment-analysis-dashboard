@@ -1,0 +1,11 @@
+,phrase,aspect,opinion
+0,The deliveries were always on time.,delivery,[]
+1,The prices are way too high.,price,['high']
+2,Their designs have really improved lately.,design,[]
+3,The store was well staffed during peak hours.,staff,[]
+4,They offer a self-service checkout option.,service,[]
+5,The service was painfully slow.,service,['slow']
+6,The design is absolutely beautiful.,design,['beautiful']
+7,The quality was surprisingly poor.,quality,['poor']
+8,The service was not good at all.,service,['good']
+9,The performance was never bad in my experience.,performance,['bad']

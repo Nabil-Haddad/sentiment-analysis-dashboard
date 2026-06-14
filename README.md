@@ -78,8 +78,8 @@ I really loved the overall experience.
 ```
 AI Multi-Tool Dashboard/
 │
-├── Models piplines/
-│   └── Sentimental Analysis/
+├── models_pipeline/
+│   └── sentiment_analysis/
 │       ├── notebooks/                          ← research & experimentation
 │       │   ├── 01_basic_sentiment_analysis.ipynb
 │       │   ├── 02_aspect_based_splitting.ipynb
@@ -157,7 +157,7 @@ uvicorn main:app --reload
 ### (Optional) Re-run the fine-tuning pipeline
 
 ```bash
-cd "Models piplines /Sentimental Analysis"
+cd models_pipelines/sentiment_analysis
 
 pip install -r requirements.txt
 

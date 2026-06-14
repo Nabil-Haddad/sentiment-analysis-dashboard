@@ -49,4 +49,5 @@ Models piplines /reports/
 Thumbs.db
 
 # ── Logs ──────────────────────────────────────────────────────────────────────
-*.log
+*.logmodels_pipelines/**/models/
+models_pipelines/**/models/
