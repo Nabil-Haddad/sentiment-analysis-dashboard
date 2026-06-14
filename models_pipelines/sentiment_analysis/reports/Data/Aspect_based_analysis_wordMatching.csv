@@ -1,0 +1,12 @@
+,Phrase,Aspects,Label,Score
+0,The prices are way too high,['price'],negative,0.92
+1,Their designs have really improved lately,['design'],positive,0.95
+2,The store was well staffed during peak hours,['staff'],positive,0.88
+3,The experience was absolutely priceless,['price'],positive,0.98
+4,They offer a self-service checkout option,['service'],neutral,0.66
+5,There is a staffroom on the second floor,['staff'],neutral,0.92
+6,The service was painfully slow,['service'],negative,0.95
+7,The design is absolutely beautiful,['design'],positive,0.99
+8,The quality was surprisingly poor,['quality'],negative,0.95
+9,The service was not good at all,['service'],negative,0.98
+10,The performance was never bad in my experience,['performance'],positive,0.79

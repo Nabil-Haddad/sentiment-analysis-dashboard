@@ -26,7 +26,7 @@ This research-first approach means every decision in the production code has a r
 
 ### Phase 2 — Standalone Python Pipeline
 
-Once the experiments were validated, the logic was extracted into clean, importable Python modules under `Models piplines/Sentimental Analysis/src/roberta/`:
+Once the experiments were validated, the logic was extracted into clean, importable Python modules under `models_pipelines/sentiment_analysis/src/roberta/`:
 
 | Module | Responsibility |
 |---|---|
@@ -276,7 +276,7 @@ The pipeline does the following:
 - Input format: `"aspect: {aspect} [SEP] {text}"` — the aspect is injected as a prefix so the model is explicitly told which aspect to evaluate
 - Trained with weighted cross-entropy to compensate for class imbalance (positive = ~65% of training data)
 - Macro F1 on SemEval-2014 Restaurant test set: **0.7847** (+14.22% over baseline)
-- Saved weights: `Models piplines/Sentimental Analysis/models/deberta-absa/`
+- Saved weights: `models_pipelines/sentiment_analysis/models/deberta-absa/`
 
 ---
 
@@ -300,8 +300,8 @@ The pipeline does the following:
 
 ```
 AI Multi-Tool Dashboard/
-├── Models piplines/
-│   └── Sentimental Analysis/
+├── models_pipelines/
+│   └── sentiment_analysis/
 │       ├── notebooks/              ← experimentation phase
 │       │   ├── 01_basic_sentiment_analysis.ipynb
 │       │   ├── 02_aspect_based_splitting.ipynb
